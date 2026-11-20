@@ -2,7 +2,7 @@
 
 Every Max, one map. A spinning globe of all the Maxes in our WhatsApp group: where they are, what they're good at, and (crucially) whether they're bald.
 
-**Live:** https://max-network-map.vercel.app
+**Live:** https://www.max-network-map.com
 
 ## How it works
 
@@ -29,6 +29,8 @@ Open http://localhost:3000. Without a storage token the app runs in **demo mode*
 Yes please, especially if your name is Max. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Privacy
+
+This is a page for a private group, so it is kept out of search engines on purpose: every response carries `X-Robots-Tag: noindex` (see `vercel.json`) and the page has a `robots` meta tag. Please don't remove either, and don't add analytics or trackers.
 
 The real sign-ups are never in this repo and never reach preview deployments. They live only in the production storage. If you find a way to break that, tell Max (the original one) before opening a public issue.
 

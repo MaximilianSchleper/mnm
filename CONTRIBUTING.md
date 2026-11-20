@@ -17,6 +17,7 @@ Only the maintainer merges. Nobody pushes to `main` directly.
 - **Never commit real sign-up data**, exports or backups, not even "just for testing". Use demo mode.
 - **Never commit secrets** (tokens, `.env` files). If you need a new setting, add it to `.env.example` with an empty value.
 - Previews and local dev always run on **fake demo data**. Don't try to point them at production storage.
+- Keep the site **out of search engines**: don't remove the `noindex` header in `vercel.json` or the `robots` meta tag, and don't add analytics or trackers.
 - Keep it simple: plain HTML/CSS/JS, no build step, no framework, unless the PR is specifically about introducing one (open an issue first for that).
 - Keep the page fast and working on phones; most Maxes will open it from WhatsApp.
 - One topic per PR. Small PRs get merged faster.
