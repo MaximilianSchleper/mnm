@@ -1,0 +1,11 @@
+{
+  "name": "max-network-map",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node dev.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "2.8.0"
+  }
+}

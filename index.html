@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Max Network Map</title>
+<meta name="description" content="Every Max in the group on one map: where they are and what they're good at.">
+<meta property="og:title" content="Max Network Map">
+<meta property="og:description" content="Every Max, one map. Add yourself in a minute.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232a44d4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='17' text-anchor='middle' fill='white'%3EM%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one tall stage — a big globe with a floating hover card, then a filterable roster. The sign-up form slides in as a sheet. */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --ink:#141a2b; --muted:#5c6579; --line:#d5dbe6;
+  --ocean:#dfe6f2; --land:#c4ccdb; --border:#eef1f6; --grat:#cfd7e4;
+  --accent:#2a44d4; --accent-ink:#ffffff; --pin-ring:#ffffff; --chip:#e4e8f5;
+  --danger:#b4232f; --ok:#1d7a4a; --scrim:rgba(15,20,40,.45);
+  --f-display:"Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1320; --surface:#171c2c; --ink:#e8ecf6; --muted:#98a1b8; --line:#2a3148;
+  --ocean:#161d31; --land:#323b56; --border:#161d31; --grat:#222a42;
+  --accent:#7d93ff; --accent-ink:#0f1320; --pin-ring:#0f1320; --chip:#222a44;
+  --danger:#ff8a93; --ok:#6fd49c; --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding-block:max(28px, env(safe-area-inset-top)) 64px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:28px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px}
+.brand{min-width:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(40px, 8vw, 84px);line-height:.92;margin:6px 0 0;letter-spacing:-.02em;text-wrap:balance}
+h1 .count{color:var(--accent);font-variant-numeric:tabular-nums}
+.sub{color:var(--muted);margin:12px 0 0;max-width:52ch}
+.baldo{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px}
+.meter{width:160px;max-width:40vw;height:8px;border-radius:999px;background:var(--chip);overflow:hidden}
+.meter span{display:block;height:100%;background:var(--accent);width:0;transition:width .6s}
+.cta{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.cta small{color:var(--muted);font-size:12px}
+.btn{appearance:none;border:0;cursor:pointer;font:600 15px/1 var(--f-body);text-decoration:none;
+  background:var(--accent);color:var(--accent-ink);padding:14px 20px;border-radius:999px;display:inline-flex;gap:8px;align-items:center}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.55;cursor:default;filter:none}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.stage-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;background:var(--chip);border-radius:999px;padding:3px}
+.seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:500 13px/1 var(--f-body);padding:8px 14px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.hint{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+#map{display:block;width:100%;height:auto;touch-action:none;cursor:grab}
+#map.dragging{cursor:grabbing}
+.sphere{fill:var(--ocean)}
+.grat{fill:none;stroke:var(--grat);stroke-width:.6}
+.land{fill:var(--land);stroke:var(--border);stroke-width:.5}
+.cl{cursor:pointer}
+.cl circle{fill:var(--accent);stroke:var(--pin-ring);stroke-width:2}
+.cl.me circle{fill:var(--ok)}
+.cl text{fill:var(--accent-ink);font:600 11px/1 var(--f-mono);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.card .people{display:flex;flex-direction:column;gap:12px;max-height:280px;overflow-y:auto;margin-top:10px}
+.card .person{display:flex;flex-direction:column;gap:4px;padding-top:10px;border-top:1px solid var(--line)}
+.card .person:first-child{padding-top:0;border-top:0}
+.card .person b{font-family:var(--f-display);font-weight:800;font-size:17px;line-height:1.15}
+.card .person .bald,.card .person .tags{margin-top:2px}
+.halo{fill:var(--accent);opacity:.18;pointer-events:none}
+.loading{position:absolute;left:16px;bottom:14px;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+
+.card{position:absolute;z-index:5;width:min(300px, calc(100% - 32px));background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(10,16,40,.18)}
+.card .num{font-family:var(--f-mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
+.card h3{font-family:var(--f-display);font-weight:800;font-size:22px;margin:2px 0 0;line-height:1.1;padding-right:18px}
+.card .where{color:var(--muted);font-size:13px;margin-top:2px}
+.card .tags{margin-top:10px}
+.card .x{position:absolute;top:8px;right:10px;border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}
+.bald{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-top:8px}
+
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;background:var(--chip);color:var(--ink);padding:3px 9px;border-radius:999px}
+
+section.roster{display:flex;flex-direction:column;gap:14px}
+.roster-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px}
+h2{font-family:var(--f-display);font-weight:800;font-size:28px;margin:0}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 13px/1 var(--f-body);padding:8px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip .n{font-family:var(--f-mono);opacity:.7;margin-left:4px}
+.list{display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:12px}
+.row{text-align:left;appearance:none;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-width:0}
+.row:hover{border-color:var(--accent)}
+.row .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.row b{font-family:var(--f-display);font-weight:800;font-size:18px;min-width:0;overflow-wrap:anywhere}
+.row .num{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .where{color:var(--muted);font-size:13px}
+.row .bald{margin-top:0}
+.empty{color:var(--muted);padding:24px;border:1px dashed var(--line);border-radius:14px;text-align:center;grid-column:1/-1}
+footer{color:var(--muted);font-size:12px;font-family:var(--f-mono)}
+
+/* Sign-up sheet */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+.sheet{position:fixed;z-index:21;top:0;right:0;bottom:0;width:min(440px, 100%);background:var(--surface);border-left:1px solid var(--line);
+  overflow-y:auto;padding-block:max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-bottom));
+  padding-left:24px;padding-right:max(24px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:20px}
+.sheet h2{font-size:32px;line-height:1}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.close{appearance:none;border:0;background:var(--chip);color:var(--ink);width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;flex:none}
+form{display:flex;flex-direction:column;gap:18px}
+.field{display:flex;flex-direction:column;gap:6px;position:relative}
+label,.legend{font-weight:600;font-size:14px}
+.help{color:var(--muted);font-size:12px}
+input[type=text]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%}
+input[type=text]:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent)}
+.suggest{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:2;box-shadow:0 10px 24px rgba(10,16,40,.15);list-style:none;padding:0;margin-block:4px 0}
+.suggest li{padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.suggest li[aria-selected="true"],.suggest li:hover{background:var(--chip)}
+.suggest small{color:var(--muted)}
+.picked{font-family:var(--f-mono);font-size:12px;color:var(--ok)}
+.yn{display:flex;gap:8px}
+.yn label{flex:1;font-weight:500}
+.yn input{position:absolute;opacity:0;pointer-events:none}
+.yn span{display:block;text-align:center;padding:11px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--bg)}
+.yn input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.yn input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.consent{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:14px}
+.consent input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.err{color:var(--danger);font-size:14px}
+.remove{appearance:none;background:transparent;border:0;padding:4px 0;color:var(--danger);font:500 14px/1.3 var(--f-body);cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
+.remove:disabled{opacity:.55;cursor:default}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(20px, env(safe-area-inset-bottom));z-index:30;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+@media (prefers-reduced-motion: reduce){.meter span{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="eyebrow">The Max Network</div>
+      <h1><span class="count" id="count">–</span> Maxes,<br>one map.</h1>
+      <div class="baldo" id="baldo" hidden><span class="eyebrow">Bald-o-meter</span><div class="meter"><span id="baldBar"></span></div><span class="hint" id="baldTxt"></span></div>
+      <p class="sub">Every Max in the group, where they are and what they're good at. Hover or tap a pin to meet them.</p>
+    </div>
+    <div class="cta">
+      <button class="btn" id="join" type="button">Put yourself on the map →</button>
+      <small id="joinNote">Takes a minute. City only, never your address.</small>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="stage-bar">
+      <div class="seg" role="group" aria-label="Map style">
+        <button type="button" id="vGlobe" aria-pressed="true">Globe</button>
+        <button type="button" id="vFlat" aria-pressed="false">Flat map</button>
+      </div>
+      <span class="hint" id="hint">Drag to spin the globe</span>
+    </div>
+    <svg id="map" viewBox="0 0 960 620" role="img" aria-label="Map of where every Max lives"></svg>
+    <div class="loading" id="loading">Loading Maxes…</div>
+    <div class="card" id="card" hidden></div>
+  </div>
+
+  <section class="roster">
+    <div class="roster-head">
+      <h2>Who's who</h2>
+      <span class="hint" id="shown"></span>
+    </div>
+    <div class="filters" id="baldFilters"></div>
+    <div class="filters" id="filters"></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <footer>Pins sit within a couple of kilometres of each Max's city, never at an exact spot.</footer>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-head">
+    <div>
+      <div class="eyebrow" id="sheetEyebrow">New Max</div>
+      <h2 id="sheetTitle">Join the map</h2>
+    </div>
+    <button class="close" id="close" type="button" aria-label="Close">×</button>
+  </div>
+  <form id="form" novalidate autocomplete="off">
+    <div class="field">
+      <label for="f-name">Your name</label>
+      <input type="text" id="f-name" maxlength="60" placeholder="Max Mustermann" autocomplete="name" required>
+    </div>
+    <div class="field">
+      <label for="f-city">City</label>
+      <input type="text" id="f-city" maxlength="80" placeholder="Start typing, then pick from the list" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
+      <ul class="suggest" id="suggest" role="listbox" hidden></ul>
+      <span class="picked" id="picked" hidden></span>
+    </div>
+    <div class="field">
+      <label for="f-skills">What are you good at?</label>
+      <input type="text" id="f-skills" maxlength="200" placeholder="e.g. Python, sales, sourdough">
+      <span class="help">Up to 6, separated by commas.</span>
+    </div>
+    <div class="field">
+      <span class="legend" id="baldLabel">Are you bald?</span>
+      <div class="yn" role="radiogroup" aria-labelledby="baldLabel">
+        <label><input type="radio" name="bald" id="f-bald-yes" value="yes"><span>Yes</span></label>
+        <label><input type="radio" name="bald" id="f-bald-no" value="no"><span>No</span></label>
+      </div>
+    </div>
+    <div class="hp" aria-hidden="true"><label for="f-website">Website</label><input type="text" id="f-website" tabindex="-1"></div>
+    <label class="consent"><input type="checkbox" id="f-consent"> Show my name, city, skills and bald status on this public map.</label>
+    <div class="err" id="err" role="alert" hidden></div>
+    <button class="btn" id="submit" type="submit">Add me to the map</button>
+    <span class="help" id="editNote">You can come back on this device to update your pin.</span>
+    <button class="remove" id="remove" type="button" hidden>Remove my pin</button>
+  </form>
+</aside>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+(async function(){
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- Browser token: lets this device update its own pin ----
+  let token = null;
+  try { token = localStorage.getItem('mnm-token'); } catch(e){}
+  if (!token) {
+    token = (crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), b=>b.toString(16).padStart(2,'0')).join('')) + '-' + Date.now().toString(36);
+    try { localStorage.setItem('mnm-token', token); } catch(e){}
+  }
+  async function sha(s){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,'0')).join('').slice(0,20);
+  }
+  const myId = await sha(token);
+
+  // ---- Map ----
+  const W = 960, H = 620;
+  const svg = d3.select('#map');
+  const gSphere = svg.append('path').attr('class','sphere');
+  const gGrat = svg.append('path').attr('class','grat');
+  const gLand = svg.append('g');
+  const gPins = svg.append('g');
+  const halo = gPins.append('circle').attr('class','halo').attr('r',18).style('display','none');
+  const graticule = d3.geoGraticule10();
+  const globe = d3.geoOrthographic().scale(290).translate([W/2, H/2]).clipAngle(90).precision(.5);
+  const flat = d3.geoNaturalEarth1().fitExtent([[12,12],[W-12,H-12]], {type:'Sphere'});
+  const path = d3.geoPath(globe);
+  let proj = globe, mode = 'globe', rotation = [-13.4, -30, 0], spinning = !reduceMotion;
+  let landSel = gLand.selectAll('path');
+  let clSel = gPins.selectAll('g.cl'), clusters = [];
+  let maxes = [], selectedId = null, shownKey = null, pinned = false, touchMode = false;
+  window.addEventListener('touchstart', ()=>{ touchMode = true; }, {passive:true, once:true});
+
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then(r=>r.json()).then(world=>{
+    const countries = topojson.feature(world, world.objects.countries);
+    landSel = gLand.selectAll('path').data(countries.features).join('path').attr('class','land');
+    render();
+  });
+
+  function visible(d){
+    if (mode !== 'globe') return true;
+    return d3.geoDistance([d.lng, d.lat], [-rotation[0], -rotation[1]]) < Math.PI/2 - 0.02;
+  }
+  let skillActive = null, baldActive = null;
+  const match = m => (!skillActive || (m.skills||[]).includes(skillActive)) && (!baldActive || m.bald===baldActive);
+  // Group pins that land within a few pixels of each other into one marker.
+  function cluster(){
+    const R = 14, out = [];
+    maxes.forEach(m=>{
+      if (!visible(m)) return;
+      const p = proj([m.lng, m.lat]); if (!p) return;
+      let c = out.find(c => Math.hypot(c.x-p[0], c.y-p[1]) < R);
+      if (c){ c.members.push(m); const k=c.members.length; c.x += (p[0]-c.x)/k; c.y += (p[1]-c.y)/k; }
+      else out.push({x:p[0], y:p[1], members:[m]});
+    });
+    out.forEach(c=>{ c.key = c.members.map(m=>m.id).sort().join('|'); });
+    return out;
+  }
+  function render(){
+    if (mode==='globe') globe.rotate(rotation);
+    path.projection(proj);
+    gSphere.attr('d', path({type:'Sphere'}));
+    gGrat.attr('d', path(graticule));
+    landSel.attr('d', path);
+    clusters = cluster();
+    clSel = gPins.selectAll('g.cl').data(clusters, c=>c.key).join(enter=>{
+      const g = enter.append('g').attr('class','cl').attr('tabindex',0).attr('role','button');
+      g.append('circle'); g.append('text');
+      g.on('mouseenter', (e,c)=>{ if(!touchMode) show(c.members[0].id); })
+       .on('mouseleave', ()=>{ if(!touchMode && !pinned) hideSoon(); })
+       .on('click', (e,c)=>{ e.stopPropagation(); pinned=true; show(c.members[0].id); })
+       .on('keydown', (e,c)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pinned=true; show(c.members[0].id);} });
+      return g;
+    });
+    const sel = selectedId && clusters.find(c=>c.members.some(m=>m.id===selectedId));
+    clSel.attr('transform', c=>'translate('+c.x+','+c.y+')')
+      .classed('me', c=>c.members.some(m=>m.id===myId))
+      .attr('aria-label', c=>c.members.length>1 ? c.members.length+' Maxes near '+c.members[0].city : c.members[0].name+', '+c.members[0].city)
+      .style('opacity', c=>c.members.some(match)?1:.15);
+    clSel.select('circle').attr('r', c=>(c.members.length>1 ? 11 : 6) + (c===sel ? 3 : 0));
+    clSel.select('text').text(c=>c.members.length>1 ? c.members.length : '');
+    if (sel){
+      halo.style('display',null).attr('cx',sel.x).attr('cy',sel.y).attr('r', sel.members.length>1 ? 24 : 18);
+      if (sel.key !== shownKey){ fillCard(sel); }
+      card.hidden = false; placeCard([sel.x, sel.y]);
+    } else {
+      halo.style('display','none');
+      if (selectedId){ card.hidden = true; shownKey = null; }
+    }
+  }
+
+  // ---- Hover card ----
+  const card = $('card'), stage = $('stage');
+  const BALD = {yes:'Bald', no:'Not bald'};
+  const tagsHTML = d => d.skills && d.skills.length ? '<div class="tags">' + d.skills.map(s=>'<span class="tag">'+esc(s)+'</span>').join('') + '</div>' : '';
+  const baldHTML = d => d.bald ? '<div class="bald">Bald status: ' + BALD[d.bald] + '</div>' : '';
+  const numTxt = d => 'MAX #' + String(d.n).padStart(2,'0') + (d.id===myId ? ' · YOU' : '');
+  function fillCard(c){
+    shownKey = c.key;
+    const ms = c.members.slice().sort((a,b)=>a.n-b.n);
+    let html = '<button class="x" type="button" aria-label="Close">×</button>';
+    if (ms.length === 1){
+      const d = ms[0];
+      html += '<div class="num">' + numTxt(d) + '</div><h3>' + esc(d.name) + '</h3>'
+        + '<div class="where">' + esc(d.city) + (d.country? ', ' + esc(d.country):'') + '</div>'
+        + tagsHTML(d) + baldHTML(d);
+    } else {
+      const cities = [...new Set(ms.map(m=>m.city))];
+      html += '<div class="num">' + ms.length + ' MAXES</div><h3>' + esc(cities.slice(0,2).join(' & ')) + (cities.length>2 ? ' + more' : '') + '</h3>'
+        + '<div class="people">' + ms.map(d =>
+            '<div class="person"><div class="num">' + numTxt(d) + '</div><b>' + esc(d.name) + '</b>'
+            + (cities.length>1 ? '<div class="where">' + esc(d.city) + '</div>' : '')
+            + tagsHTML(d) + baldHTML(d) + '</div>').join('') + '</div>';
+    }
+    card.innerHTML = html;
+    card.querySelector('.x').onclick = (e)=>{ e.stopPropagation(); pinned=false; hide(); };
+  }
+  let hideT = null;
+  function hideSoon(){ clearTimeout(hideT); hideT = setTimeout(hide, 250); }
+  function show(id){ clearTimeout(hideT); selectedId = id; spinning = false; render(); }
+  function hide(){ clearTimeout(hideT); selectedId = null; shownKey = null; card.hidden = true; render(); }
+  card.addEventListener('mouseenter', ()=>clearTimeout(hideT));
+  card.addEventListener('mouseleave', ()=>{ if(!touchMode && !pinned) hideSoon(); });
+  function placeCard(p){
+    const r = svg.node().getBoundingClientRect(), s = stage.getBoundingClientRect(), k = r.width / W;
+    const x = r.left - s.left + p[0]*k, y = r.top - s.top + p[1]*k;
+    const cw = card.offsetWidth, ch = card.offsetHeight;
+    let left = x + 16; if (left + cw > s.width - 12) left = x - cw - 16;
+    left = Math.max(12, Math.min(left, s.width - cw - 12));
+    const top = Math.max(60, Math.min(y - ch/2, s.height - ch - 12));
+    card.style.left = left + 'px'; card.style.top = top + 'px';
+  }
+  svg.on('click', ()=>{ pinned=false; hide(); });
+
+  let start = null;
+  svg.call(d3.drag()
+    .filter(e => mode==='globe' && !e.target.closest('.cl'))
+    .on('start', e=>{ spinning=false; start={x:e.x,y:e.y,r:rotation.slice()}; svg.classed('dragging',true); })
+    .on('drag', e=>{ const k = 75/globe.scale(); rotation=[start.r[0]+(e.x-start.x)*k, Math.max(-80,Math.min(80,start.r[1]-(e.y-start.y)*k)), 0]; render(); })
+    .on('end', ()=>svg.classed('dragging',false)));
+
+  let last = performance.now();
+  (function tick(t){ if (spinning && mode==='globe'){ rotation[0] += (t-last)*0.006; render(); } last = t; requestAnimationFrame(tick); })(last);
+
+  function flyTo(d){
+    if (mode!=='globe' || reduceMotion){ if (mode==='globe') rotation=[-d.lng, Math.max(-80,Math.min(80,-d.lat)),0]; pinned=true; show(d.id); return; }
+    spinning = false;
+    const from = rotation.slice(), to = [-d.lng, Math.max(-80,Math.min(80,-d.lat)), 0];
+    to[0] = from[0] + (((to[0]-from[0])+540)%360-180);
+    const ip = d3.interpolate(from, to);
+    d3.transition().duration(900).ease(d3.easeCubicInOut).tween('rot', ()=>t=>{ rotation=ip(t); render(); })
+      .on('end', ()=>{ pinned=true; show(d.id); });
+  }
+
+  const vG = $('vGlobe'), vF = $('vFlat');
+  function setMode(m){
+    mode = m; proj = m==='globe' ? globe : flat;
+    vG.setAttribute('aria-pressed', m==='globe'); vF.setAttribute('aria-pressed', m==='flat');
+    $('hint').textContent = m==='globe' ? 'Drag to spin the globe' : 'Hover or tap a pin';
+    svg.style('cursor', m==='globe' ? null : 'default'); render();
+  }
+  vG.onclick = ()=>setMode('globe'); vF.onclick = ()=>setMode('flat');
+
+  // ---- Data + roster ----
+
+  async function load(){
+    try {
+      const r = await fetch('/api/maxes', {cache:'no-store'});
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Could not load the map.');
+      maxes = (j.maxes||[]).filter(m=>Number.isFinite(m.lat)&&Number.isFinite(m.lng)).map((m,i)=>({...m, n:i+1}));
+      $('loading').hidden = true;
+    } catch(e) {
+      $('loading').textContent = e.message || 'Could not load the map.';
+      maxes = [];
+    }
+    halo.lower();
+    $('count').textContent = maxes.length;
+    const mine = maxes.find(m=>m.id===myId);
+    $('join').textContent = mine ? 'Edit your pin →' : 'Put yourself on the map →';
+    drawStats(); drawFilters(); drawList(); render();
+    return mine;
+  }
+
+  function drawStats(){
+    const answered = maxes.filter(m=>m.bald).length, bald = maxes.filter(m=>m.bald==='yes').length;
+    $('baldo').hidden = !answered;
+    if (answered){
+      const pct = Math.round(100*bald/answered);
+      $('baldBar').style.width = pct+'%';
+      $('baldTxt').textContent = pct + '% bald · ' + answered + ' reporting';
+    }
+  }
+  function chip(label, count, pressed, onClick){
+    const b = document.createElement('button'); b.type='button'; b.className='chip'; b.setAttribute('aria-pressed', pressed);
+    b.innerHTML = esc(label) + (count!=null ? '<span class="n">'+count+'</span>' : ''); b.onclick = onClick; return b;
+  }
+  function drawFilters(){
+    const bf = $('baldFilters'); bf.innerHTML='';
+    const by = maxes.filter(m=>m.bald==='yes').length, bn = maxes.filter(m=>m.bald==='no').length;
+    if (by+bn){
+      bf.append(chip('Any hair', null, baldActive===null, ()=>{baldActive=null; drawFilters(); drawList();}));
+      if (by) bf.append(chip('Bald', by, baldActive==='yes', ()=>{baldActive='yes'; drawFilters(); drawList();}));
+      if (bn) bf.append(chip('Not bald', bn, baldActive==='no', ()=>{baldActive='no'; drawFilters(); drawList();}));
+    }
+    const counts = {};
+    maxes.forEach(m=>(m.skills||[]).forEach(s=>counts[s]=(counts[s]||0)+1));
+    const skills = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b)).slice(0,18);
+    if (skillActive && !counts[skillActive]) skillActive = null;
+    const f = $('filters'); f.innerHTML='';
+    if (!skills.length) return;
+    f.append(chip('All skills', null, skillActive===null, ()=>{skillActive=null; drawFilters(); drawList();}));
+    skills.forEach(s=>f.append(chip(s, counts[s], skillActive===s, ()=>{skillActive=s; drawFilters(); drawList();})));
+  }
+  function drawList(){
+    const list = $('list'); list.innerHTML='';
+    const rows = maxes.filter(match);
+    render();
+    $('shown').textContent = maxes.length ? rows.length + ' of ' + maxes.length : '';
+    if (!maxes.length){ list.innerHTML = '<div class="empty">No Maxes on the map yet. Hit “Put yourself on the map” to be pin number one.</div>'; return; }
+    rows.forEach(m=>{
+      const b = document.createElement('button'); b.type='button'; b.className='row';
+      b.innerHTML = '<div class="top"><b>'+esc(m.name)+'</b><span class="num">#'+String(m.n).padStart(2,'0')+(m.id===myId?' · you':'')+'</span></div>'
+        + '<div class="where">'+esc(m.city)+(m.country?', '+esc(m.country):'')+'</div>'
+        + ((m.skills||[]).length ? '<div class="tags">'+m.skills.map(s=>'<span class="tag">'+esc(s)+'</span>').join('')+'</div>' : '')
+        + (m.bald ? '<div class="bald">Bald status: '+BALD[m.bald]+'</div>' : '');
+      b.onclick = ()=>{ stage.scrollIntoView({behavior: reduceMotion?'auto':'smooth', block:'center'}); flyTo(m); };
+      list.append(b);
+    });
+  }
+
+  // ---- Sign-up sheet ----
+  const sheet = $('sheet'), scrim = $('scrim');
+  let place = null; // {city, country, lat, lng}
+  function openSheet(){
+    const mine = maxes.find(m=>m.id===myId);
+    $('err').hidden = true;
+    if (mine){
+      $('sheetEyebrow').textContent = 'Max #' + String(mine.n).padStart(2,'0');
+      $('sheetTitle').textContent = 'Edit your pin';
+      $('submit').textContent = 'Save changes';
+      $('f-name').value = mine.name; $('f-city').value = mine.city;
+      place = {city: mine.city, country: mine.country, lat: mine.lat, lng: mine.lng, keep:true};
+      showPicked();
+      $('f-skills').value = (mine.skills||[]).join(', ');
+      if (mine.bald) $('f-bald-'+mine.bald).checked = true;
+      $('f-consent').checked = true;
+    }
+    const rm = $('remove'); rm.hidden = !mine; rm.dataset.armed = ''; rm.textContent = 'Remove my pin';
+    scrim.hidden = false; sheet.hidden = false;
+    setTimeout(()=>$('f-name').focus(), 30);
+  }
+  function closeSheet(){ sheet.hidden = true; scrim.hidden = true; $('join').focus(); }
+  $('join').onclick = openSheet; $('close').onclick = closeSheet; scrim.onclick = closeSheet;
+  document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !sheet.hidden) closeSheet(); });
+
+  // City autocomplete (Open-Meteo geocoding, free, no key)
+  const cityIn = $('f-city'), sug = $('suggest');
+  let sugItems = [], sugIdx = -1, sugTimer = null, sugReq = 0;
+  function showPicked(){
+    const p = $('picked');
+    if (place){ p.hidden = false; p.textContent = '✓ ' + place.city + (place.country? ', '+place.country : ''); }
+    else p.hidden = true;
+  }
+  function closeSug(){ sug.hidden = true; cityIn.setAttribute('aria-expanded','false'); sugIdx = -1; }
+  function pick(i){
+    const r = sugItems[i]; if (!r) return;
+    place = {city: r.name, country: r.country || '', lat: r.latitude, lng: r.longitude};
+    cityIn.value = r.name; closeSug(); showPicked();
+  }
+  function drawSug(){
+    sug.innerHTML = '';
+    sugItems.forEach((r,i)=>{
+      const li = document.createElement('li'); li.setAttribute('role','option'); li.id = 'sug-'+i;
+      li.setAttribute('aria-selected', i===sugIdx);
+      li.innerHTML = '<span>'+esc(r.name)+'</span><small>'+esc([r.admin1, r.country].filter(Boolean).join(', '))+'</small>';
+      li.onmousedown = (e)=>{ e.preventDefault(); pick(i); };
+      sug.append(li);
+    });
+    sug.hidden = !sugItems.length; cityIn.setAttribute('aria-expanded', String(!!sugItems.length));
+  }
+  cityIn.addEventListener('input', ()=>{
+    place = null; showPicked();
+    clearTimeout(sugTimer);
+    const q = cityIn.value.trim();
+    if (q.length < 2){ sugItems=[]; drawSug(); return; }
+    sugTimer = setTimeout(async ()=>{
+      const id = ++sugReq;
+      try {
+        const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&format=json&name='+encodeURIComponent(q));
+        const j = await r.json();
+        if (id !== sugReq) return;
+        sugItems = j.results || []; sugIdx = sugItems.length ? 0 : -1; drawSug();
+      } catch(e){ sugItems=[]; drawSug(); }
+    }, 220);
+  });
+  cityIn.addEventListener('keydown', e=>{
+    if (sug.hidden) return;
+    if (e.key==='ArrowDown'){ e.preventDefault(); sugIdx=Math.min(sugItems.length-1, sugIdx+1); drawSug(); }
+    else if (e.key==='ArrowUp'){ e.preventDefault(); sugIdx=Math.max(0, sugIdx-1); drawSug(); }
+    else if (e.key==='Enter'){ e.preventDefault(); pick(sugIdx<0?0:sugIdx); }
+    else if (e.key==='Escape'){ e.stopPropagation(); closeSug(); }
+  });
+  cityIn.addEventListener('blur', ()=>setTimeout(closeSug, 120));
+
+  function fail(msg){ const er=$('err'); er.textContent = msg; er.hidden = false; }
+  function toast(msg){ const t=$('toast'); t.textContent = msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true, 3200); }
+
+  $('form').addEventListener('submit', async (e)=>{
+    e.preventDefault(); $('err').hidden = true;
+    const name = $('f-name').value.trim();
+    const baldEl = document.querySelector('input[name=bald]:checked');
+    if (!name) return fail('Add your name.');
+    if (!place) return fail('Pick your city from the suggestions so we can place your pin.');
+    if (!$('f-consent').checked) return fail('Tick the box to appear on the public map.');
+    const btn = $('submit'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const r = await fetch('/api/maxes', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        token, name, city: place.city, country: place.country, lat: place.lat, lng: place.lng,
+        skills: $('f-skills').value.split(',').map(s=>s.trim()).filter(Boolean),
+        bald: baldEl ? baldEl.value : '', consent: true, website: $('f-website').value
+      })});
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok) throw new Error(j.error || 'Could not save. Try again.');
+      closeSheet();
+      await load();
+      const me = maxes.find(m=>m.id===myId);
+      toast(me ? 'You\'re Max #' + me.n + ' on the map' : 'Saved');
+      if (me){ stage.scrollIntoView({behavior: reduceMotion?'auto':'smooth', block:'center'}); flyTo(me); }
+    } catch(err){ fail(err.message); }
+    finally { btn.disabled = false; btn.textContent = label; }
+  });
+
+  // Remove: first tap arms, second tap deletes.
+  $('remove').addEventListener('click', async ()=>{
+    const rm = $('remove');
+    if (!rm.dataset.armed){ rm.dataset.armed = '1'; rm.textContent = 'Tap again to remove your pin for good'; return; }
+    rm.disabled = true; rm.textContent = 'Removing…'; $('err').hidden = true;
+    try {
+      const r = await fetch('/api/maxes', {method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token })});
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok) throw new Error(j.error || 'Could not remove your pin. Try again.');
+      ['f-name','f-city','f-skills'].forEach(id=>$(id).value=''); place = null; showPicked();
+      document.querySelectorAll('input[name=bald]').forEach(i=>i.checked=false); $('f-consent').checked = false;
+      $('sheetEyebrow').textContent = 'New Max'; $('sheetTitle').textContent = 'Join the map'; $('submit').textContent = 'Add me to the map';
+      closeSheet(); hide();
+      await load();
+      toast('Your pin is removed');
+    } catch(err){ fail(err.message); rm.dataset.armed=''; rm.textContent = 'Remove my pin'; }
+    finally { rm.disabled = false; }
+  });
+
+  await load();
+  window.addEventListener('resize', ()=>{ if (selectedId) render(); });
+})();
+</script>
+</body>
+</html>
